@@ -15,6 +15,7 @@
 //! Configuration for a Habitat VaultSrv service
 
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+use std::time::Duration;
 
 use dbcache::config::DataStoreCfg;
 use hab_core::config::{ConfigFile, ParseInto};
@@ -28,10 +29,18 @@ use error::{Error, Result};
 pub struct Config {
     /// List of net addresses for routing servers to connect to.
     pub routers: Vec<SocketAddr>,
-    /// Net address to the persistent datastore.
+    /// Net address to the persistent datastore. - DELETE
     pub datastore_addr: SocketAddr,
-    /// Connection retry timeout in milliseconds for datastore.
+    /// Connection retry timeout in milliseconds for datastore. - DELETE
     pub datastore_retry_ms: u64,
+    /// PostgreSQL connection URL
+    pub datastore_connection_url: String,
+    /// Timing to retry the connection to the data store if it cannot be established
+    pub datastore_connection_retry_ms: u64,
+    /// How often to cycle a connection from the pool
+    pub datastore_connection_timeout: Duration,
+    /// If the datastore connection is under test
+    pub datastore_connection_test: bool,
     /// Number of database connections to start in pool.
     pub pool_size: u32,
     /// Router's heartbeat port to connect to.
@@ -46,8 +55,15 @@ impl Default for Config {
     fn default() -> Self {
         Config {
             routers: vec![SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 5562))],
+            // DIE DIE
             datastore_addr: SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 6379)),
             datastore_retry_ms: Self::default_connection_retry_ms(),
+
+            datastore_connection_url: String::from("postgresql:://hab@127.0.0.1/builder_db_test"),
+            datastore_connection_retry_ms: 300,
+            datastore_connection_timeout: Duration::from_secs(3600),
+            datastore_connection_test: false,
+
             pool_size: Self::default_pool_size(),
             heartbeat_port: 5563,
             shards: (0..SHARD_COUNT).collect(),

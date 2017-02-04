@@ -26,7 +26,7 @@ use hab_net::dispatcher::prelude::*;
 use hab_net::server::{Envelope, NetIdent, RouteConn, Service, ZMQ_CONTEXT};
 
 use config::Config;
-use data_store::DataStore;
+use redis_data_store::DataStore;
 use error::{Error, Result};
 
 const BE_LISTEN_ADDR: &'static str = "inproc://backend";

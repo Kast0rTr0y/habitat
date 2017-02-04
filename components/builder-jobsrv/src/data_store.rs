@@ -52,12 +52,11 @@ impl DataStore {
     /// This includes all the schema and data migrations, along with stored procedures for data
     /// access.
     pub fn setup(&self) -> Result<()> {
-        let migrator = Migrator::new(&self.pool);
+        let mut migrator = Migrator::new(&self.pool);
         migrator.setup()?;
 
         // The core jobs table
         migrator.migrate("jobsrv",
-                     1,
                      r#"CREATE TABLE jobs (
                                     id bigint PRIMARY KEY,
                                     owner_id bigint,
@@ -75,7 +74,6 @@ impl DataStore {
 
         // Insert a new job into the jobs table
         migrator.migrate("jobsrv",
-                             2,
                              r#"CREATE OR REPLACE FUNCTION insert_job_v1 (
                                 id bigint, 
                                 owner_id bigint,
@@ -102,7 +100,6 @@ impl DataStore {
         //
         // Just make sure you always address the columns by name, not by position.
         migrator.migrate("jobsrv",
-                     3,
                      r#"CREATE OR REPLACE FUNCTION get_job_v1 (jid bigint) RETURNS SETOF jobs AS $$
                             BEGIN
                               RETURN QUERY SELECT * FROM jobs WHERE id = jid;
@@ -128,7 +125,6 @@ impl DataStore {
         // Note that the sort order ensures that jobs that fail to dispatch and are then returned
         // will be the first job selected, making FIFO a reality.
         migrator.migrate("jobsrv",
-                         4,
                          r#"CREATE OR REPLACE FUNCTION pending_jobs_v1 (integer) RETURNS SETOF jobs AS
                                 $$
                                 DECLARE
@@ -150,12 +146,13 @@ impl DataStore {
 
         // Update the state of a job. Takes a job id and a state, and updates that row.
         migrator.migrate("jobsrv",
-                         5,
                          r#"CREATE OR REPLACE FUNCTION set_job_state_v1 (jid bigint, jstate text) RETURNS void AS $$
                             BEGIN
                                 UPDATE jobs SET job_state=jstate, updated_at=now() WHERE id=jid;
                             END
                          $$ LANGUAGE plpgsql VOLATILE"#)?;
+        migrator.migrate("jobsrv",
+                         r#"CREATE INDEX pending_jobs_index_v1 on jobs(created_at) WHERE job_state = 'Pending'"#)?;
         Ok(())
     }
 
